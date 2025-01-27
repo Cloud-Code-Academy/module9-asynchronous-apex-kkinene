@@ -41,9 +41,16 @@ public with sharing class AsynchronousTest {
         }
         insert testOpps;
 
+        // Collect Account IDs for the method call
+        List<Id> accountIds = new List<Id>();
+        for (Account acc : testAccounts) {
+            accountIds.add(acc.Id);
+        }
+
         // Call the method to test between the startTest and stopTest methods
         Test.startTest();
         //YOUR CODE HERE
+        NextStepFuture.updateNextStep(accountIds); // Call the method
         Test.stopTest();
 
         // Query the updated accounts and opportunities
@@ -190,4 +197,5 @@ public with sharing class AsynchronousTest {
         }
     }
     */
+    
 }

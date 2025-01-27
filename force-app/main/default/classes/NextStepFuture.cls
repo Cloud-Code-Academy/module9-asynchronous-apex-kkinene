@@ -27,9 +27,52 @@ public with sharing class NextStepFuture {
      * Opportunity Next Step field is a standard field
      * Update the corresponding test class AsynchronousTest and test method nextStepFuture_testUpdateAllNextStep to cover test this method
      */
-    //[public | private ] [static] data_type method_name (input parameters) {
-    //  The body of the method
-    //}
+    @future
+    public static void updateNextStep (List<Id> acctIds) {
+        //  The body of the method
+        // Check if the input list is null or empty
+        if (acctIds == null || acctIds.isEmpty()) {
+            System.debug('No accounts provided to update.');
+            return; // Exit the method if there are no accounts
+        }
+
+        // Query the accounts based on the provided IDs
+        List<Account> accts = [SELECT Id, Next_Step__c FROM Account WHERE Id IN :acctIds];
+
+    
+
+        try {
+            String nextStepMessage = 'Meeting in the future';
+            for (Account tempAcc : accts) {
+                tempAcc.Next_Step__c =nextStepMessage;                
+            }
+
+            //Save to database
+            update accts;
+
+            // Retrieve all opportunities tied to the given accounts
+            List<Opportunity> oppsToUpdate = [
+                SELECT Id, NextStep 
+                FROM Opportunity 
+                WHERE AccountId IN :accts
+            ];
+
+            // Update the Next_Steps__c field on the retrieved opportunities
+            for (Opportunity opp : oppsToUpdate) {
+                opp.NextStep = nextStepMessage;
+            }
+
+            // Perform a DML update to save the opportunity changes to the database
+            if (!oppsToUpdate.isEmpty()) {
+                update oppsToUpdate;
+            }
+
+        } catch(Exception e){
+            // Handle any exceptions that occur during the process
+            System.debug('Error updating Next_Step__c: ' + e.getMessage());
+            throw e; // Re-throw the exception if needed
+        }
+    }
 
     /*
     * Question 2
