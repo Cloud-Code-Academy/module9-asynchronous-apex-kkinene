@@ -85,8 +85,10 @@ public with sharing class NextStepFuture {
         Opportunity bigDeal = new Opportunity();
         insertBigDeal(bigDeal);
 
-        UserRole[] roles = [SELECT Id, Name FROM UserRole WHERE Id = :UserInfo.getUserRoleId() OR Name = 'CRO' LIMIT 1];
-        updateUserRoleName(roles);
+        //Get user role id as a string for future method
+        List<String> userRoleId = new List<String>{UserInfo.getUserRoleId()};
+        //Call future method to avoid Mix DML Error
+        updateUserRoleName(userRoleId);
     }
 
     // Helper method to insert big deal
@@ -100,16 +102,26 @@ public with sharing class NextStepFuture {
     }
 
 
-    // Helper method to update role name
-    private static void updateUserRoleName(UserRole[] roles){
+    // Future method to update role name
+    @future
+    public static void updateUserRoleName(List<String> roleId){
+
+        if (roleId == null || roleId.isEmpty()) {
+            System.debug('No UserRole IDs provided.');
+            return; 
+        }
+
+        // Query for the user role using the provided role ID
+        List<UserRole> provRole = [SELECT Id, Name FROM UserRole WHERE Id IN :roleId LIMIT 1];
+
         UserRole role;
-        if (roles.isEmpty()) {
+        if (provRole == null || provRole.isEmpty()) {
             role = new UserRole();
             role.portalType = 'None'; 
             role.CaseAccessForAccountOwner = 'Edit'; 
             // role.OpportunityAccessForAccountOwner = 'Edit'; //This may need to be uncommented depending on your orgs Organization Wide Defaults(OWD) settings. If you are receiving FIELD_INTEGRITY_EXCEPTION, field integrity exception: unknown (Opportunity access level below organization default): [unknown], uncomment this line.
         } else {
-            role = roles[0];
+            role = provRole[0];
         }
 
         role.Name = 'CRO';
