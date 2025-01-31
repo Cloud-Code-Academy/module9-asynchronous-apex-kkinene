@@ -27,8 +27,8 @@ public with sharing class NextStepSchedule {
      * Configure and schedule the job using the Apex Scheduler in Salesforce Setup
      * Code to execute the batch job should not need to change other than uncommenting the code
      */
-    //[public | private ] [static] data_type execute (input parameters) {
-        //NextStepBatch batch = new NextStepBatch(); 
-        //Database.executeBatch(batch);
-    //}
+    public void execute (SchedulableContext ctx) {
+        NextStepBatch batch = new NextStepBatch(); 
+        Database.executeBatch(batch);
+    }    
 }
