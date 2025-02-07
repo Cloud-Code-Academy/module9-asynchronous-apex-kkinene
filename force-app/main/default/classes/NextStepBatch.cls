@@ -18,31 +18,56 @@
  * 
  * Note: This class contains placeholders and commented sections that need to be updated with actual logic for querying and updating records.
  */
-public with sharing class NextStepBatch implements Database.Batchable<sObject>{
+public with sharing class NextStepBatch implements Database.Batchable<sObject>, Database.Stateful{
 
+    // instance member to retain state across transactions
+    public Integer recordsProcessed = 0;
     public Database.QueryLocator start(Database.BatchableContext bc){
         // Query for all accounts and return the query locator.
-        return null; // Update null with the query locator
+        return Database.getQueryLocator(
+            'SELECT ID, Next_Step__c FROM Account '       
+        );
     }
     
     public void execute(Database.BatchableContext bc, List<Account> scope){
         final String BATCH_NEXT_STEP = 'Batching the next meetings together.';
 
         // Update the Next Step field on each record in the batch scope.
-
+        List<Account> accts = new List<Account>();
+                
         // Loop through the scope account records
+        for (Account tempAcct : scope) {
 
             // Set the Next Step field to 'Batching the next meetings together.'
+            tempAcct.Next_Step__C = BATCH_NEXT_STEP;
+            //Add Account to update List
+            accts.add(tempAcct);
+            // increment the instance member counter
+            recordsProcessed = recordsProcessed + 1;
+        }
 
-        // Update the account records in this batch scope
+        // Perform bulk update only if there are records to update
+        if (!accts.isEmpty()) {
+            Database.update(accts, false);  // Allows partial success
+        }
         
         // Query for all opportunities related to the accounts in this batch scope
-
+        List<Opportunity> relatedOpps = [SELECT Id, NextStep
+                                             FROM Opportunity
+                                             WHERE AccountId
+                                             IN :scope];
         // Loop through the opportunity records
-
+        for(Opportunity opp : relatedOpps){
             // Set the Next Step field to 'Batching the next meetings together.'
+            opp.NextStep = BATCH_NEXT_STEP;
+            // increment the instance member counter
+            recordsProcessed = recordsProcessed + 1;
+        }            
 
-        // Update the opportunity records
+        // Perform bulk update only if there are records to update
+        if (!relatedOpps.isEmpty()) {
+            Database.update(relatedOpps, false);
+        }
 
     }
     
@@ -50,8 +75,18 @@ public with sharing class NextStepBatch implements Database.Batchable<sObject>{
         final List<User> USERS = [SELECT Id, Name, Email FROM User WHERE IsActive = true AND (NOT Email LIKE 'autoproc%')]; // DO NOT CHANGE
 
         // Get the email addresses of all active users
+        Set<String> emailList= new Set<String>();
 
-            // Pass the set of active user emails to the sendEmailToActiveUsers method
+        for(User tempUser: USERS){
+            emailList.add(tempUser.Email);
+
+        }
+
+
+        // Pass the set of active user emails to the sendEmailToActiveUsers method
+        if (!emailList.isEmpty()) {// Only send email if there are valid email addresses
+            sendEmailToActiveUsers(emailList);
+        }
     }
 
     // Helper method to send an email to all emails in the set
@@ -60,7 +95,7 @@ public with sharing class NextStepBatch implements Database.Batchable<sObject>{
             Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage();
             mail.setToAddresses(new List<String>(emails));
             mail.setSubject('Next Step Batch Complete');
-            mail.setPlainTextBody('The next step batch has completed.');
+            mail.setPlainTextBody('The next step batch has completed.\nTotal Records '+                     'Processed: ' + recordsProcessed);            
             Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });
         } catch (Exception e) {
             System.debug('Error sending email: ' + e.getMessage());
