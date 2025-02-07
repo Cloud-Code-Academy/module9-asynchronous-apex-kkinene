@@ -178,7 +178,12 @@ public with sharing class AsynchronousTest {
         NextStepSchedule scheduleJob = new NextStepSchedule();
         String year = String.valueOf(Date.today().year() + 1);
         String cron = '0 0 0 15 3 ? ' + year; // Arbitrary cron expression for once-off execution in the future
-        System.schedule('NextStepScheduleTest', cron, new NextStepSchedule());
+        String jobID = System.schedule('NextStepScheduleTest', cron, new NextStepSchedule());
+
+         // Verify that the job was scheduled
+         CronTrigger job = [SELECT Id, CronExpression, State FROM CronTrigger WHERE Id = :jobID LIMIT 1];
+         System.assertEquals('WAITING', job.State, 'Scheduled job is not in the WAITING state.');
+ 
         scheduleJob.execute(null);
         Test.stopTest();
 

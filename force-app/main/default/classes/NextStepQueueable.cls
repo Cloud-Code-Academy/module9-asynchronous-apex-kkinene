@@ -30,31 +30,15 @@ public with sharing class NextStepQueueable implements Queueable {//added implem
 
     // Method to queue the job
     public static void enqueueJob() {
-        /*/ Get 10 accounts with Next Step populated
-        List<Account> acctList = [SELECT Id, Next_Step__c 
-                                  FROM Account 
-                                  WHERE Id IN :accounts AND Next_Step__c != null 
-                                  LIMIT 10];*/
-        //Query all the accounts
-        Map<Id, Account> allAccounts = new Map<Id, Account>(
-            [SELECT id, Next_Step__c
+        
+        //Query 10 accounts and Assign to Map
+        Map<Id, Account> acctMap = new Map<Id, Account>(
+            [SELECT Id, Next_Step__c
              FROM Account
-             WHERE Next_Step__c != null]
+             WHERE Next_Step__c != null
+             LIMIT 10]
         );
-
-        // Take only 10 accounts and assign to Map
-        Map<Id, Account> acctMap = new Map<Id, Account>();
-        Integer count =0;
-        for(Id tempId : allAccounts.keySet()){
-
-            if(count>=10){
-                break;
-            }
-            acctMap.put(tempId, allAccounts.get(tempId));
-            count+=1;
-
-        }
-                                  
+                                     
         // If there are any accounts, queue the job using System.enqueueJob
         if(!acctMap.isEmpty()){  //Checking for null will always be true since it instantiated as a new map earlier
             System.enqueueJob(new NextStepQueueable(acctMap));
